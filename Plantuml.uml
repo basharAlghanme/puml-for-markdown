@@ -1,0 +1,92 @@
+@startuml
+title Student Project Registration - Sequence Diagram
+
+skinparam sequence {
+  ArrowColor #000000
+  ArrowFontSize 12
+  ArrowFontStyle bold
+  LifeLineBorderColor #000000
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBorderColor #000000
+  ParticipantBackgroundColor #F0F0F0
+  ParticipantFontSize 12
+  ParticipantFontStyle bold
+}
+
+actor Student as student
+participant "System Interface" as system
+participant "Authentication Service" as auth
+participant "Project Service" as project
+participant Database as db
+participant "Notification Service" as notify
+participant "Department Head" as deptHead
+participant Supervisor as supervisor
+
+== Authentication Phase ==
+student -> system : Login(username, password)
+system -> auth : Authenticate credentials
+auth -> db : Fetch user record
+db --> auth : Return user data
+auth -> db : Validate password
+db --> auth : Password valid
+auth --> system : Authentication successful
+system --> student : Display dashboard
+
+== Project Registration Phase ==
+student -> system : Request new project registration
+system --> student : Display project form
+student -> system : Submit project proposal
+system -> project : submitProjectProposal(data)
+
+== Validation Phase ==
+project -> db : Check student eligibility
+db --> project : Eligible = TRUE
+project -> db : Check supervisor availability
+db --> project : Available = TRUE
+project -> db : Create project record (PENDING)
+db --> project : Project ID generated
+
+== Notification Phase ==
+project -> notify : Generate notifications
+notify -> db : Store notifications
+db --> notify : Stored successfully
+
+== Parallel Approvals ==
+par Supervisor Approval
+  notify -> supervisor : New project assigned
+  supervisor -> system : Review project proposal
+  system --> supervisor : Display project details
+  supervisor -> system : Accept supervision
+  system -> project : Update supervisor status
+  project -> db : Save supervisor approval
+  db --> project : Saved
+and Department Approval
+  notify -> deptHead : Approval required
+  deptHead -> system : Review project
+  system --> deptHead : Display project details
+  deptHead -> system : Approve project
+  system -> project : Update department approval
+  project -> db : Save department approval
+  db --> project : Saved
+end
+
+== Project Activation ==
+project -> db : Verify approvals
+db --> project : All approvals confirmed
+project -> db : Activate project
+db --> project : Project ACTIVE
+project -> notify : Send final notifications
+notify -> student : Project approved
+notify -> supervisor : Project activated
+project --> system : Return success response
+system --> student : Display registration success
+
+== Alternative Flow: Ineligible Student ==
+group Student Not Eligible
+  project -> db : Check eligibility
+  db --> project : Eligible = FALSE
+  project --> system : Return rejection
+  system --> student : Display error message
+end
+
+@enduml
